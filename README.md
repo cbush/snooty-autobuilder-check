@@ -3,7 +3,7 @@
 This is a GitHub Action that checks Snooty autobuilder for success.
 This is unofficial, unsupported, undocumented, unspellhcekced. YMMV.
 
-## Setup
+## Prerequisites
 
 Check your repo Settings to ensure Actions are enabled:
 
@@ -35,26 +35,7 @@ jobs:
 
 For example: https://github.com/mongodb/docs-realm/blob/master/.github/workflows/check-autobuilder.yml
 
-## Quick Setup
-
-You can probably cherry-pick this commit to add it to your repo: https://github.com/mongodb/docs-app-services/pull/14/commits/4f63bcc6bea6cfaed10234ca80082e34dd55d363
-
-To do so, go into your repo and run the following:
-
-```bash
-git checkout -b add-autobuilder-check upstream/master
-git remote add docs-app-services mongodb/docs-app-services
-git fetch docs-app-services 4f63bcc6bea6cfaed10234ca80082e34dd55d363
-git cherry-pick 4f63bcc6bea6cfaed10234ca80082e34dd55d363
-git remote remove docs-app-services
-git push --set-upstream upstream add-autobuilder-check
-```
-
-Open a PR and wow your colleagues. Once merged, your action should work.
-
-That's it! Enjoy!
-
-## Other Usage
+## Usage Without GitHub Actions
 
 You can run this script from a CI other than GitHub Actions. Clone this repo and in the clone directory, run:
  
