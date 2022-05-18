@@ -2,11 +2,11 @@
 name: Check Autobuilder for Errors
 author: Chris Bush
 description: 'Checks Snooty Autobuilder jobs for errors.'
-shell: bash
 branding:
   icon: 'check-square'
   color: 'white'
 runs:
   using: 'node16'
+  shell: bash
   steps:
     - run: cd "${{github.action_path}}" && npm run build && node . "${{github.actor}}/${{github.event.pull_request.head.repo.full_name}}/${{github.head_ref}}"
