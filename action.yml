@@ -2,6 +2,7 @@
 name: Check Autobuilder for Errors
 author: Chris Bush
 description: 'Checks Snooty Autobuilder jobs for errors.'
+shell: bash
 branding:
   icon: 'check-square'
   color: 'white'
