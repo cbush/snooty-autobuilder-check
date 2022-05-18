@@ -9,4 +9,4 @@ runs:
   using: 'node16'
   steps:
     - shell: bash
-    - run: cd "${{github.action_path}}" && npm run build && node . "${{github.actor}}/${{github.event.pull_request.head.repo.full_name}}/${{github.head_ref}}"
+      run: cd "${{github.action_path}}" && npm run build && node . "${{github.actor}}/${{github.event.pull_request.head.repo.full_name}}/${{github.head_ref}}"
