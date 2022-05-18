@@ -3,6 +3,27 @@
 This is a GitHub Action that checks Snooty autobuilder for success.
 This is unofficial, unsupported, undocumented, unspellhcekced. YMMV.
 
+## Quick Setup
+
+Check your repo Settings to ensure Actions are enabled:
+
+<img width="420" alt="image" src="https://user-images.githubusercontent.com/20050130/169135846-c2dba5ae-53bf-41da-84fc-b356c63f2a64.png">
+
+⚠️ If your repo is **private**, you **can't use Actions for free.**
+
+You can probably cherry-pick this commit to add it to your repo: https://github.com/mongodb/docs-app-services/pull/14/commits/4f63bcc6bea6cfaed10234ca80082e34dd55d363
+
+To do so, go into your repo and run the following:
+
+```bash
+git remote add docs-app-services mongodb/docs-app-services
+git fetch docs-app-services 4f63bcc6bea6cfaed10234ca80082e34dd55d363
+git cherry-pick 4f63bcc6bea6cfaed10234ca80082e34dd55d363
+git remote remove docs-app-services
+```
+
+That's it! Enjoy!
+
 ## Usage in a GitHub Actions Workflow
 
 This action assumes your repo uses snooty autobuilder, which is unlikely unless you work on MongoDB docs.
