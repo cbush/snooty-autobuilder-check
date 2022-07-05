@@ -18,7 +18,12 @@ const stitchClient = Stitch.initializeDefaultAppClient(STITCH_APP_ID);
 
 type Build = {
   endTime: Date;
+  status: "inQueue" | "inProgress" | "completed" | "failed";
   logs: string[];
+  error?: {
+    time: string;
+    reason: string;
+  };
 };
 
 async function nextInStream<T>(
@@ -104,7 +109,8 @@ async function main(): Promise<string[] | undefined> {
     const timeoutMs = 10 * 60 * 1000; // allow a lot of time for autobuilder to complete
     build = (await nextInStream(stream, timeoutMs)).fullDocument ?? null;
   } catch (error) {
-    console.warn(`Update never received: ${error.message}`);
+    const message = error instanceof Error ? error.message : JSON.stringify(error)
+    console.warn(`Update never received: ${message}`);
     console.log("No ongoing build found. Falling back to findOne.");
     build = await collection.findOne(filter, {
       sort: {
@@ -113,7 +119,7 @@ async function main(): Promise<string[] | undefined> {
     });
   }
 
-  if (build == null) {
+  if (!build) {
     return [
       `Nothing found for filter: ${JSON.stringify(
         filter
@@ -123,7 +129,16 @@ This might happen if the autobuilder is not set up on your fork.
 `,
     ];
   }
+  
+  if (build.status === "failed") {
+    const { time, reason } = build.error!
+    return [
+      `Build failed at ${time}
 
+${reason}`,
+    ];
+  }
+  
   if (build?.logs === undefined) {
     return [`build.logs undefined! build=${JSON.stringify(build)}`];
   }
