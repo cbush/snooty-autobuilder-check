@@ -104,7 +104,8 @@ async function main(): Promise<string[] | undefined> {
     const timeoutMs = 10 * 60 * 1000; // allow a lot of time for autobuilder to complete
     build = (await nextInStream(stream, timeoutMs)).fullDocument ?? null;
   } catch (error) {
-    console.warn(`Update never received: ${error.message}`);
+    const message = error instanceof Error ? error.message : JSON.stringify(error)
+    console.warn(`Update never received: ${message}`);
     console.log("No ongoing build found. Falling back to findOne.");
     build = await collection.findOne(filter, {
       sort: {
