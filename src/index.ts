@@ -18,7 +18,12 @@ const stitchClient = Stitch.initializeDefaultAppClient(STITCH_APP_ID);
 
 type Build = {
   endTime: Date;
+  status: "inQueue" | "inProgress" | "completed" | "failed";
   logs: string[];
+  error?: {
+    time: string;
+    reason: string;
+  };
 };
 
 async function nextInStream<T>(
@@ -114,7 +119,7 @@ async function main(): Promise<string[] | undefined> {
     });
   }
 
-  if (build == null) {
+  if (build === null) {
     return [
       `Nothing found for filter: ${JSON.stringify(
         filter
@@ -124,7 +129,16 @@ This might happen if the autobuilder is not set up on your fork.
 `,
     ];
   }
+  
+  if (build.status === "failed") {
+    const { time, reason } = build.error!
+    return [
+      `Build failed at ${time}
 
+${reason}`,
+    ];
+  }
+  
   if (build?.logs === undefined) {
     return [`build.logs undefined! build=${JSON.stringify(build)}`];
   }
