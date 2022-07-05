@@ -119,7 +119,7 @@ async function main(): Promise<string[] | undefined> {
     });
   }
 
-  if (build == null) {
+  if (!build) {
     return [
       `Nothing found for filter: ${JSON.stringify(
         filter
