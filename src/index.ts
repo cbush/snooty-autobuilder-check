@@ -1,17 +1,12 @@
+import yargs from "yargs";
+import { strict as assert } from "assert";
 import {
   AnonymousCredential,
   RemoteMongoClient,
   Stitch,
   Stream,
 } from "mongodb-stitch-server-sdk";
-
-// Add expected errors here.
-const expectedErrors: RegExp[] = [
-  /(WARNING|ERROR)\(sdk\/java\/api.*/,
-  /ERROR #98124  WEBPACK/,
-  /WARNING.*: Directive "container" has been deprecated/,
-  /Title (overline|underline) too (short|long)/, // Seriously?!
-];
+import { loadConfig } from "./config";
 
 const STITCH_APP_ID = "workerpool-boxgs";
 
@@ -43,7 +38,63 @@ async function nextInStream<T>(
   });
 }
 
-async function main(): Promise<string[] | undefined> {
+type MainArgs = {
+  actorOwnerRepoBranch: string;
+  configPath?: string;
+};
+
+async function main({
+  actorOwnerRepoBranch,
+  configPath,
+}: MainArgs): Promise<void> {
+  try {
+    const { expectedErrors } = await loadConfig(configPath);
+
+    const errors = await evaluateBuild({
+      actorOwnerRepoBranch,
+    });
+
+    if (errors.length === 0) {
+      console.log("Build completed without errors.");
+      process.exit(0);
+    }
+    const unexpectedErrors = errors.filter((error) => {
+      for (const expectedError of expectedErrors) {
+        const re =
+          typeof expectedError === "string"
+            ? new RegExp(expectedError)
+            : expectedError;
+        if (re.test(error)) {
+          return false;
+        }
+      }
+      return true;
+    });
+    if (unexpectedErrors.length === 0) {
+      console.log("Passed with expected errors.");
+      process.exit(0);
+    }
+    console.error("Encountered the following unexpected errors:");
+    console.error(unexpectedErrors.join("\n"));
+    process.exit(1);
+  } catch (error) {
+    console.error(error);
+    process.exit(1);
+  }
+}
+
+async function evaluateBuild({
+  actorOwnerRepoBranch,
+}: {
+  actorOwnerRepoBranch: string;
+}): Promise<string[]> {
+  const [actor, owner, repo, branch] = actorOwnerRepoBranch.split("/");
+  if (!actor || !owner || !repo || !branch) {
+    return [
+      `Expected CLI argument in form 'actor/owner/repo/branch', got '${actorOwnerRepoBranch}`,
+    ];
+  }
+
   await stitchClient.auth.loginWithCredential(new AnonymousCredential());
   const remoteMongoClient = stitchClient.getServiceClient(
     RemoteMongoClient.factory,
@@ -51,20 +102,6 @@ async function main(): Promise<string[] | undefined> {
   );
   const db = remoteMongoClient.db("pool");
   const collection = db.collection<Build>("queue");
-  const { argv } = process;
-  const actorOwnerRepoBranch = argv[2];
-
-  if (actorOwnerRepoBranch === undefined) {
-    return [`Usage: ${argv[0]} ${argv[1]} <owner/repo/branch>`];
-  }
-
-  const [actor, owner, repo, branch] = actorOwnerRepoBranch.split("/");
-  if (!actor || !owner || !repo || !branch) {
-    return [
-      `Expected CLI argument in form 'owner/repo/branch', got '${actorOwnerRepoBranch}`,
-    ];
-  }
-
   const filter = {
     $or: [{ "payload.repoOwner": actor }, { "payload.repoOwner": owner }],
     "payload.repoName": repo,
@@ -110,7 +147,8 @@ async function main(): Promise<string[] | undefined> {
     const timeoutMs = 10 * 60 * 1000; // allow a lot of time for autobuilder to complete
     build = (await nextInStream(stream, timeoutMs)).fullDocument ?? null;
   } catch (error) {
-    const message = error instanceof Error ? error.message : JSON.stringify(error)
+    const message =
+      error instanceof Error ? error.message : JSON.stringify(error);
     console.warn(`Update never received: ${message}`);
     console.log("No ongoing build found. Falling back to findOne.");
     build = await collection.findOne(filter, {
@@ -130,16 +168,16 @@ This might happen if the autobuilder is not set up on your fork.
 `,
     ];
   }
-  
+
   if (build.status === "failed") {
-    const { time, reason } = build.error!
+    const { time, reason } = build.error!;
     return [
       `Build failed at ${time}
 
 ${reason}`,
     ];
   }
-  
+
   if (build?.logs === undefined) {
     return [`build.logs undefined! build=${JSON.stringify(build)}`];
   }
@@ -161,32 +199,33 @@ ${reason}`,
     errors.push((match as RegExpExecArray)[0]);
   }
 
-  return errors.length > 0 ? errors : undefined;
+  return errors;
 }
 
-main()
-  .catch((error) => {
-    console.error(error);
-    process.exit(1);
-  })
-  .then((errors) => {
-    if (errors === undefined) {
-      console.log("Build completed without errors.");
-      process.exit(0);
+yargs
+  .command(
+    "$0 <actorOwnerRepoBranch>",
+    "Checks snooty autobuilder build status for a commit.",
+    (yargs) => {
+      return yargs
+
+        .positional("actorOwnerRepoBranch", {
+          describe: "actor/owner/repo/branch to check build",
+          type: "string",
+        })
+        .option("config", {
+          string: true,
+          description:
+            "Path to configuration JavaScript file. See defaultConfig.js for an example.",
+        });
+    },
+    ({ actorOwnerRepoBranch, config }) => {
+      assert(actorOwnerRepoBranch !== undefined); // Protected by yargs at runtime, but not typed properly
+      return main({
+        actorOwnerRepoBranch,
+        configPath: config,
+      });
     }
-    const unexpectedErrors = errors.filter((error) => {
-      for (const re of expectedErrors) {
-        if (re.test(error)) {
-          return false;
-        }
-      }
-      return true;
-    });
-    if (unexpectedErrors.length === 0) {
-      console.log("Passed with expected errors.");
-      process.exit(0);
-    }
-    console.error("Encountered the following unexpected errors:");
-    console.error(unexpectedErrors.join("\n"));
-    process.exit(1);
-  });
+  )
+  .help()
+  .parse();
