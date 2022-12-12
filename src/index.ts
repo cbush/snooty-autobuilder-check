@@ -216,7 +216,7 @@ yargs
         .option("config", {
           string: true,
           description:
-            "Path to configuration js. See defaultConfig.js for an example.",
+            "Path to configuration JavaScript file. See defaultConfig.js for an example.",
         });
     },
     ({ actorOwnerRepoBranch, config }) => {
