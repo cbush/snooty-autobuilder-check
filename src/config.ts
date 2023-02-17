@@ -2,6 +2,11 @@ import * as Path from "path";
 
 export type Config = {
   expectedErrors: (RegExp | string)[];
+
+  /**
+    How long to wait for the build to complete.
+   */
+  timeoutMs: number;
 };
 
 export async function loadConfig(
@@ -12,8 +17,9 @@ export async function loadConfig(
   const absolutePath = Path.resolve(path);
   const module = await import(absolutePath);
   console.log(module);
-  const { expectedErrors } = module as {
+  const { expectedErrors, timeoutMs } = module as {
     expectedErrors?: unknown;
+    timeoutMs?: unknown;
   };
 
   if (expectedErrors === undefined) {
@@ -32,5 +38,13 @@ export async function loadConfig(
     }
   });
 
-  return { expectedErrors };
+  if (timeoutMs === undefined) {
+    throw new Error(`${absolutePath} does not export 'timeoutMs'!`);
+  }
+
+  if (!Number.isInteger(timeoutMs)) {
+    throw new Error(`${absolutePath}'s 'timeoutMs' is not an integer!`);
+  }
+
+  return { expectedErrors, timeoutMs: timeoutMs as number };
 }

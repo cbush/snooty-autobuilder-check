@@ -48,10 +48,11 @@ async function main({
   configPath,
 }: MainArgs): Promise<void> {
   try {
-    const { expectedErrors } = await loadConfig(configPath);
+    const { expectedErrors, timeoutMs } = await loadConfig(configPath);
 
     const errors = await evaluateBuild({
       actorOwnerRepoBranch,
+      timeoutMs,
     });
 
     if (errors.length === 0) {
@@ -85,8 +86,10 @@ async function main({
 
 async function evaluateBuild({
   actorOwnerRepoBranch,
+  timeoutMs,
 }: {
   actorOwnerRepoBranch: string;
+  timeoutMs: number;
 }): Promise<string[]> {
   const [actor, owner, repo, branch] = actorOwnerRepoBranch.split("/");
   if (!actor || !owner || !repo || !branch) {
@@ -132,8 +135,7 @@ async function evaluateBuild({
   try {
     console.log("Checking for ongoing build...");
     build =
-      (await nextInStream(ongoingBuildStream, 10 * 60 * 1000)).fullDocument ??
-      null;
+      (await nextInStream(ongoingBuildStream, timeoutMs)).fullDocument ?? null;
 
     console.log("Ongoing build found.");
     const stream = await collection.watch({
@@ -144,7 +146,6 @@ async function evaluateBuild({
     });
 
     console.log("Waiting for build to complete...");
-    const timeoutMs = 10 * 60 * 1000; // allow a lot of time for autobuilder to complete
     build = (await nextInStream(stream, timeoutMs)).fullDocument ?? null;
   } catch (error) {
     const message =
@@ -193,11 +194,14 @@ ${reason}`,
   }
 
   console.log("Build completed at", build.endTime);
-  const re = /(?:WARNING|ERROR).*/g;
+  const re = /^(?:WARNING|ERROR).*$/;
   const errors: string[] = [];
-  for (let match = re.exec(log); match !== null; match = re.exec(log)) {
-    errors.push((match as RegExpExecArray)[0]);
-  }
+  log.split("\n").forEach((line) => {
+    const match = re.exec(line);
+    if (match !== null) {
+      errors.push(match[0]);
+    }
+  });
 
   return errors;
 }
