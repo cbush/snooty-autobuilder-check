@@ -4,6 +4,7 @@ module.exports = {
     /ERROR #98124  WEBPACK/,
     /WARNING.*: Directive "container" has been deprecated/,
     /WARNING.*: Directive "cssclass" has been deprecated/,
+    /WARNING.*: Intrinsic size for image not calculated at path *. Image may not be lazy loaded/,
     /Title (overline|underline) too (short|long)/,
   ],
   timeoutMs: 7 * 60 * 1000,
